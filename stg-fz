@@ -1,0 +1,78 @@
+#!/bin/bash
+
+# subcommands
+# - edit
+# - reword
+# - pick
+
+select_patch() {
+	while getopts M ch; do
+		case $ch in
+		M) FZF_MULTIPLE=1;;
+		*) exit 2;;
+		esac
+	done
+	shift $(( OPTIND - 1 ))
+	stg series -rP |
+		fzf --reverse --preview='stg show {1}' ${FZF_MULTIPLE:+--multi}
+}
+
+stg_fz_edit() {
+	select_patch -- |
+	xargs --no-run-if-empty stg edit
+}
+
+stg_fz_goto() {
+	select_patch -- |
+	xargs --no-run-if-empty stg goto
+}
+
+stg_fz_pick() {
+	select_patch --
+}
+
+stg_fz_squash() {
+	select_patch -M |
+	xargs --no-run-if-empty stg squash
+}
+
+stg_fz_sink() {
+	sink_args=()
+	while getopts t:T: ch; do
+		case $ch in
+		t)	sink_args+=( -t "$OPTARG" );;
+		T)	sink_args+=( -T "$OPTARG" );;
+		*)	exit 2;;
+		esac
+	done
+	shift $(( OPTIND - 1 ))
+	select_patch -M |
+	xargs --no-run-if-empty stg sink "${sink_args[@]}"
+}
+
+stg_fz_float() {
+	select_patch -M |
+	xargs --no-run-if-empty stg float
+}
+
+cmd=$1
+shift
+
+case $cmd in
+	edit)	stg_fz_edit "$@"
+		;;
+	goto)	stg_fz_goto "$@"
+		;;
+	pick)	stg_fz_pick "$@"
+		;;
+	squash)	stg_fz_squash "$@"
+		;;
+	sink)	stg_fz_sink "$@"
+		;;
+	float)	stg_fz_float "$@"
+		;;
+
+	*)	echo "Must select one of edit, float, goto, pick, squash" >&2
+		exit 1
+		;;
+esac

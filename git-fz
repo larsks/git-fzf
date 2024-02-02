@@ -1,0 +1,41 @@
+#!/bin/sh
+
+# subcommands
+# - edit
+# - reword
+# - pick
+
+select_commit() {
+	git rev-list --oneline "${2:-HEAD}" |
+		fzf --reverse --preview='git show --name-status {1}' | awk '{print $1}'
+}
+
+git_fz_edit() {
+	select_commit "$@" |
+	GIT_SEQUENCE_EDITOR='sed -i 1s/pick/edit/' xargs -IREV git rebase -i "REV^"
+}
+
+git_fz_reword() {
+	select_commit "$@" |
+	GIT_SEQUENCE_EDITOR='sed -i 1s/pick/reword/' xargs -IREV git rebase -i "REV^"
+}
+
+git_fz_pick() {
+	select_commit "$@"
+}
+
+cmd=$1
+shift
+
+case $cmd in
+	edit)	git_fz_edit "$@"
+		;;
+	reword)	git_fz_reword "$@"
+		;;
+	pick)	git_fz_pick "$@"
+		;;
+
+	*)	echo "Must select one of edit, reword, pick" >&2
+		exit 1
+		;;
+esac
