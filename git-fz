@@ -6,12 +6,29 @@
 # - pick
 
 select_commit() {
-	git rev-list --oneline "${2:-HEAD}" |
+	local no_show_diff
+	no_show_diff=1
+
+	while getopts d ch; do
+		case $ch in
+			d) no_show_diff=;;
+			*) exit 2;;
+		esac
+	done
+	shift $(( OPTIND - 1 ))
+
+	git rev-list --no-merges --oneline "${2:-HEAD}" |
 		fzf --reverse \
 			--preview-label=DESCRIPTION \
-			--preview='git show --name-status {1} | bat --color always' \
+			--preview="git show ${no_show_diff:+--name-status} {1} | bat --color always" \
 			|
-		awk '{print $1}'
+		awk '{print $1}' |
+		xargs git rev-parse
+
+	# We pass the commit through git rev-parse to get the
+	# full commit id. This only matters when using
+	# git_fz_view, because a short commit may match on
+	# multiple repositories.
 }
 
 git_fz_edit() {
@@ -26,6 +43,13 @@ git_fz_reword() {
 
 git_fz_pick() {
 	select_commit "$@"
+}
+
+git_fz_view() {
+	select_commit "$@" |
+	xargs -ICOMMIT gh search commits --hash=COMMIT --json url |
+	jq -r '.[0].url' |
+	xargs xdg-open
 }
 
 select_branch() {
@@ -61,10 +85,14 @@ case $cmd in
 		;;
 	pick|p)	git_fz_pick "$@"
 		;;
+
+	view|v)	git_fz_view "$@"
+		;;
+
 	switch|sw)	git_fz_switch "$@"
 		;;
 
-	*)	echo "Must select one of edit, reword, pick, switch" >&2
+	*)	echo "Must select one of edit, reword, pick, view, switch" >&2
 		exit 1
 		;;
 esac
