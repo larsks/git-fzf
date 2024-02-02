@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # subcommands
 # - edit
@@ -7,7 +7,11 @@
 
 select_commit() {
 	git rev-list --oneline "${2:-HEAD}" |
-		fzf --reverse --preview='git show --name-status {1}' | awk '{print $1}'
+		fzf --reverse \
+			--preview-label=DESCRIPTION \
+			--preview='git show --name-status {1} | bat --color always' \
+			|
+		awk '{print $1}'
 }
 
 git_fz_edit() {
@@ -24,6 +28,29 @@ git_fz_pick() {
 	select_commit "$@"
 }
 
+select_branch() {
+	refpattern=(refs/heads/)
+	while getopts ra ch; do
+		case $ch in
+			r)	refpattern=(refs/remotes/);;
+			a)	refpattern=(refs/remotes/ refs/heads);;
+			*)	exit 2;;
+		esac
+	done
+	shift $(( OPTIND - 1 ))
+	git for-each-ref --format='%(refname:lstrip=2)' "${refpattern[@]}" |
+		fzf \
+			--preview-label=DESCRIPTION \
+			--preview='git show --name-status {1} | bat --color always' \
+			|
+		awk '{print $1}'
+}
+
+git_fz_switch() {
+	select_branch -- |
+		xargs git switch
+}
+
 cmd=$1
 shift
 
@@ -33,6 +60,8 @@ case $cmd in
 	reword)	git_fz_reword "$@"
 		;;
 	pick)	git_fz_pick "$@"
+		;;
+	switch)	git_fz_switch "$@"
 		;;
 
 	*)	echo "Must select one of edit, reword, pick" >&2
