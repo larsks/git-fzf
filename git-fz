@@ -47,8 +47,8 @@ select_branch() {
 }
 
 git_fz_switch() {
-	select_branch -- |
-		xargs git switch
+	select_branch "$@" |
+		xargs -r git checkout
 }
 
 cmd=$1
@@ -64,7 +64,7 @@ case $cmd in
 	switch|sw)	git_fz_switch "$@"
 		;;
 
-	*)	echo "Must select one of edit, reword, pick" >&2
+	*)	echo "Must select one of edit, reword, pick, switch" >&2
 		exit 1
 		;;
 esac
