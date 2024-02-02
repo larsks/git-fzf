@@ -55,13 +55,13 @@ cmd=$1
 shift
 
 case $cmd in
-	edit)	git_fz_edit "$@"
+	edit|ed|goto|g)	git_fz_edit "$@"
 		;;
-	reword)	git_fz_reword "$@"
+	reword|re)	git_fz_reword "$@"
 		;;
-	pick)	git_fz_pick "$@"
+	pick|p)	git_fz_pick "$@"
 		;;
-	switch)	git_fz_switch "$@"
+	switch|sw)	git_fz_switch "$@"
 		;;
 
 	*)	echo "Must select one of edit, reword, pick" >&2
